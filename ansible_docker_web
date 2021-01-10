@@ -1,0 +1,62 @@
+- hosts: docker
+  tasks:
+          - name: Updating yum repository
+            yum_repository:
+                    name: "docker"
+                    description: "Docker yum repo"
+                    file: "/etc/yum.repos.d/kv"
+                    baseurl: "http://download.docker.com/linux/centos/7/x86_64/stable"
+                    gpgcheck: no
+
+          - name: Installing python3
+            package:
+                    name: "python3"
+                    state: present
+
+          - name: Installing docker-py library
+            pip:
+                    name: "docker.py"
+
+          - name: Installing docker
+            command:
+                    cmd: "dnf install docker-ce --nobest -y"
+                    warn: no
+
+          - name: Creating workspace
+            file:
+                    path: "/root/ws"
+                    state: directory
+
+          - name: Putting content of Web Server in MN
+            copy:
+                    dest: "/root/ws/page.html"
+                    src: "page.html"
+
+          - name: Starting service
+            service:
+                    name: "docker"
+                    state: started
+
+          - name: Pulling Image
+            docker_image:
+                    name: "httpd"
+                    source: pull
+
+          - name: Running container
+            docker_container:
+                    name: "webos"
+                    image: "httpd"
+                    state: started
+                    interactive: yes
+                    detach: yes
+                    ports:
+                            - "1670:80"
+                    volumes:
+                            - /root/ws:/usr/local/apache2/htdocs/
+
+          - name: Stopping Firewall
+            firewalld:
+                    port: "1670/tcp"
+                    state: enabled
+                    permanent: yes
+                    immediate: yes
